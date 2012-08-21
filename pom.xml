@@ -1,0 +1,425 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.ishisystems.performance.example</groupId>
+    <artifactId>perf-test</artifactId>
+    <packaging>pom</packaging>
+    <name>Performance Tests</name>
+    <version>0.9-SNAPSHOT</version>
+    <description>JMX scripts and associated resources running performance tests against the example app.</description>
+
+    <properties>
+        <!-- Static properties that are the same for all profiles-->
+        <gc.jvm.args>-XX:+PrintGCTimeStamps -verbose:gc -XX:+PrintGCDetails -XX:+PrintTenuringDistribution
+            -XX:NewSize=384m -XX:SurvivorRatio=2 -XX:+UseParallelGC -XX:+UseParallelOldGC
+            -Xloggc:${project.build.directory}/exampleApp-gc.log
+        </gc.jvm.args>
+        <global.jvm.args>-Dorg.osgi.framework.bootdelegation=java.*,com.jprofiler.* -XX:MaxPermSize=128m -Xmx1024m
+            ${gc.jvm.args}
+        </global.jvm.args>
+        <jvm.args>${global.jvm.args}</jvm.args>
+        <!-- Performance tools related settings-->
+        <jprofiler.home>${tool.basedir}/jprofiler5/</jprofiler.home>
+        <!--Where JProfiler is located-->
+        <jmeter.home>${tool.basedir}/apache-jmeter-2.7/</jmeter.home>
+        <!--Where JMeter was extracted too-->
+        <performance.datadir>${appdata.basedir}/datadir/basedata/exampleApp/</performance.datadir>
+        <!--Location of exampleApp Data-->
+        <history.directory>
+            ${appdata.basedir}/history/exampleApp/${project.version}-${java.specification.version}-${dataset.version}
+        </history.directory>
+        <!--Where to save history files-->
+        <!--Passed to JMeter - length of test-->
+        <script.fixedload.runtime>180</script.fixedload.runtime>
+        <!-- Application and container settings-->
+        <sleep.seconds>15</sleep.seconds>
+        <exampleApp.startup.opts>${jvm.args}</exampleApp.startup.opts>
+        <!--exampleApp comes in a version numbered directory from unzip-->
+        <exampleApp.installdir>${project.build.directory}/exampleApp</exampleApp.installdir>
+        <!--These base directories are the containers for where the zips will be extracted.  See the xxx.location variables in the profile
+for the final location of the dataset and repository roots-->
+        <!--Repository is the name of the svn repo-->
+        <repository.basedir>${project.build.directory}/test-classes/repo</repository.basedir>
+        <!--Dataset is the name of the CSV's for use in JMeter-->
+        <dataset.basedir>${project.build.directory}/test-classes</dataset.basedir>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>com.ishisystems.performance.example</groupId>
+            <artifactId>perf-assembly</artifactId>
+            <type>zip</type>
+            <version>${project.version}</version>
+        </dependency>
+        <!--<dependency>
+            <groupId>no.bekk.bekkopen.cde</groupId>
+            <artifactId>parent</artifactId>
+            <version>${project.version}</version>
+            <type>war</type>
+            <scope>system</scope>
+            <systemPath>${repository.warfile}</systemPath>
+        </dependency>-->
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.0-alpha-4</version>
+            <executions>
+                <!--<execution>
+                    <id>30_unpack-exampleApp-zip</id>
+                    <phase>generate-sources</phase>
+                    <goals>
+                        <goal>unpack</goal>
+                    </goals>
+                    <configuration>
+                        <artifactItems>
+                            <artifactItem>
+                                <groupId>com.atlassian.exampleApp</groupId>
+                                <artifactId>atlassian-exampleApp</artifactId>
+                                <version>2.0-SNAPSHOT</version>
+                                <type>zip</type>
+                            </artifactItem>
+                        </artifactItems>
+                        <outputDirectory>${project.build.directory}</outputDirectory>
+                        <markersDirectory>${exampleApp.installdir}/dependency-plugin-markers</markersDirectory>
+                    </configuration>
+                </execution>
+                <execution>
+                    <id>40_unpack-exampleApp-dataset</id>
+                    <phase>generate-test-sources</phase>
+                    <goals>
+                        <goal>unpack-dependencies</goal>
+                    </goals>
+                    <configuration>
+                        <artifactItems>
+                            <artifactItem>
+                                <groupId>com.atlassian.performance.exampleApp</groupId>
+                                <artifactId>source-repository</artifactId>
+                            </artifactItem>
+                        </artifactItems>
+                        <outputDirectory>${repository.basedir}</outputDirectory>
+                        <markersDirectory>${repository.basedir}/dependency-plugin-markers</markersDirectory>
+                    </configuration>
+                </execution>-->
+                    <execution>
+                        <id>61_unpack-exampleApp-performancetest</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.ishisystems.performance.example</groupId>
+                                    <artifactId>perf-assembly</artifactId>
+                                    <type>zip</type>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--<plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>50_copy-exampleApp-config</id>
+                        <phase>process-test-resources</phase>
+                        <configuration>
+                            <tasks>
+                                <replace file="${exampleApp.config}" token="@repository-location@"
+                                         value="${repository.location}"/>
+                                <copy file="${exampleApp.config}" todir="${exampleApp.installdir}" overwrite="true"/>
+                                <chmod dir="${exampleApp.installdir}/bin" perm="ugo+rx" includes="**/*.sh"/>
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>65_sleep</id>
+                        <phase>integration-test</phase>
+                        <configuration>
+                            <tasks>
+                                <sleep seconds="${sleep.seconds}"/>
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.1</version>
+                <configuration>
+                    <workingDirectory>${exampleApp.installdir}</workingDirectory>
+                    <outputFile>${project.build.directory}/output.log</outputFile>
+                    <environmentVariables>
+                        <EXAMPLE_APP_OPTS>${exampleApp.startup.opts}</EXAMPLE_APP_OPTS>
+                    </environmentVariables>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>60_start-exampleApp</id>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <executable>${exampleApp.installdir}/bin/start.sh</executable>
+                        </configuration>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>80_stop-exampleApp</id>
+                        <phase>post-integration-test</phase>
+                        <configuration>
+                            <executable>${exampleApp.installdir}/bin/stop.sh</executable>
+                        </configuration>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>-->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>chronos-jmeter-maven-plugin</artifactId>
+                <version>1.0.1</version>
+                <configuration>
+                    <jmeterhome>${jmeter.home}</jmeterhome>
+                    <historydir>${history.directory}</historydir>
+                    <sysproperties>
+                        <property>
+                            <name>script.runtime</name>
+                            <value>${script.fixedload.runtime}</value>
+                        </property>
+                        <property>
+                            <name>script.base</name>
+                            <value>${project.build.directory}/performanceTest</value>
+                        </property>
+                        <property>
+                            <name>resource.dir</name>
+                            <value>${dataset.location}</value>
+                        </property>
+                    </sysproperties>
+                    <options>
+                        <value>-XX:+UseParallelGC</value>
+                        <value>-XX:+UseParallelOldGC</value>
+                    </options>
+                    <heap>756m</heap>
+                    <newsize>256m</newsize>
+                    <permsize>192m</permsize>
+                    <survivorratio>8</survivorratio>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>71_fixedload-test</id>
+                        <configuration>
+                            <dataid>fixedloadtest</dataid>
+                            <input>${project.build.directory}/performanceTest/jmeter-test-example-fixedload.jmx</input>
+                        </configuration>
+                        <goals>
+                            <goal>jmeter</goal>
+                            <goal>check</goal>
+                            <goal>savehistory</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-descriptor</id>
+                        <goals>
+                            <goal>attach-descriptor</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <reportPlugins>
+                        <plugin>
+                            <groupId>org.codehaus.mojo</groupId>
+                            <artifactId>chronos-report-maven-plugin</artifactId>
+                            <version>1.0.1</version>
+                            <configuration>
+                                <historydir>${history.directory}</historydir>
+                            </configuration>
+                            <reportSets>
+                                <reportSet>
+                                    <id>fixedloadreport</id>
+                                    <configuration>
+                                        <dataid>fixedloadtest</dataid>
+                                        <reportid>jmeter-fixedload-report</reportid>
+                                        <title>JMeter Fixed Load Test Report</title>
+                                        <description><![CDATA[Fixed Load Test Report]]></description>
+                                        <showaverage>false</showaverage>
+                                        <showpercentile>false</showpercentile>
+                                        <showinfotable>false</showinfotable>
+                                        <showtimeinfo>false</showtimeinfo>
+                                        <showsummary>true</showsummary>
+                                        <showdetails>false</showdetails>
+                                        <showresponse>true</showresponse>
+                                        <showhistogram>true</showhistogram>
+                                        <showthroughput>false</showthroughput>
+                                    </configuration>
+                                    <reports>
+                                        <report>report</report>
+                                        <report>historyreport</report>
+                                    </reports>
+                                </reportSet>
+                            </reportSets>
+                        </plugin>
+                    </reportPlugins>
+                </configuration>
+            </plugin>
+            <!--<plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>xml-maven-plugin</artifactId>
+                <version>1.0</version>
+                <configuration>
+                    <transformationSets>
+                        <transformationSet>
+                            <dir>${project.build.directory}/performanceTest/results</dir>
+                            <stylesheet>src/test/resources/jmeter-results-detail-report_21.xsl</stylesheet>
+                            <outputDir>${project.build.directory}/site/jmeter-results</outputDir>
+                            <fileMappers>
+                                <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.FileExtensionMapper">
+                                    <targetExtension>html</targetExtension>
+                                </fileMapper>
+                            </fileMappers>
+                        </transformationSet>
+                    </transformationSets>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>pre-site</phase>
+                        <goals>
+                            <goal>transform</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>-->
+        </plugins>
+    </build>
+    <!--<reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>chronos-report-maven-plugin</artifactId>
+                <version>1.0.1</version>
+                <configuration>
+                    <historydir>${history.directory}</historydir>
+                </configuration>
+                <reportSets>
+                    <reportSet>
+                        <id>fixedloadreport</id>
+                        <configuration>
+                            <dataid>fixedloadtest</dataid>
+                            <reportid>jmeter-fixedload-report</reportid>
+                            <title>JMeter Fixed Load Test Report</title>
+                            <description><![CDATA[Fixed Load Test Report]]></description>
+                            <showaverage>false</showaverage>
+                            <showpercentile>false</showpercentile>
+                            <showinfotable>false</showinfotable>
+                            <showtimeinfo>false</showtimeinfo>
+                            <showsummary>true</showsummary>
+                            <showdetails>false</showdetails>
+                            <showresponse>true</showresponse>
+                            <showhistogram>true</showhistogram>
+                            <showthroughput>false</showthroughput>
+                        </configuration>
+                        <reports>
+                            <report>report</report>
+                            <report>historyreport</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+        </plugins>
+    </reporting>-->
+    <profiles>
+        <profile>
+            <id>windows</id>
+            <properties>
+                <tool.basedir>c:/installs/tools</tool.basedir>
+                <appdata.basedir>c:/installs/appdata</appdata.basedir>
+                <dataset.version>internal</dataset.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>unix</id>
+            <properties>
+                <tool.basedir>/opt/tools</tool.basedir>
+                <appdata.basedir>/opt/appdata</appdata.basedir>
+                <dataset.version>internal</dataset.version>
+            </properties>
+        </profile>
+    <!--<profile>
+        <id>dataset-sanity1</id>
+        <properties>
+            <repository.zipfile>${performance.datadir}/sanity1.zip</repository.zipfile>
+            <repository.location>${repository.basedir}/sanity1</repository.location>
+            <dataset.location>${dataset.basedir}/dataset-sanity1</dataset.location>
+            <dataset.version>sanity1</dataset.version>
+            <exampleApp.config>${dataset.location}/config.xml</exampleApp.config>
+        </properties>
+    </profile>
+    <profile>-->
+            <!--
+              This profile does a few things:
+              1.  Sets the JVM Args to contain the right stuff for running JProfiler
+              2.  Search and replace on the JProfiler config to set the cpusnapshot save location to the ${project.build.directory}
+
+              In order to make this work, you need a JProfiler config with triggers that fire every N minutes to save the CPU snapshot data out.  Edit the Jprofiler config
+              and look for the output directory you set in the GUI.  Replace this with @project-dir@ and this ant-run task will replace it with the build dir.
+              Finally, set the id=N (id=112 below) to the JProfiler session id you want to run.
+              Keep the JProfiler config in src/test/resources/ and it will be copied to ${project.build.directory}/test-classes/ by maven.
+              Don't forget to set LD_LIBRARY_PATH to preload the correct .so.
+            -->
+            <!--<id>profile</id>
+            <properties>
+                <jprofiler.configfile>${project.build.directory}/test-classes/jprofilerconfig.xml</jprofiler.configfile>
+                <jvm.args>-agentlib:jprofilerti=offline,id=112,config=${jprofiler.configfile}
+                    -Xbootclasspath/a:${jprofiler.home}/bin/agent.jar ${global.jvm.args}
+                </jvm.args>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>51_update-jprofiler-paths</id>
+                                <phase>process-test-resources</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <tasks>
+                                        <replace file="${jprofiler.configfile}" token="@project-dir@"
+                                                 value="${project.build.directory}"/>
+                                    </tasks>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>-->
+    </profiles>
+    <!--<distributionManagement>
+        <site>
+            <id>perf-tests</id>
+            <url>dav:https://10.50.101.42/${project.artifactId}/${project.version}-${appserver.version}-${java.specification.version}-${dataset.version}</url>
+        </site>
+    </distributionManagement>-->
+</project>
