@@ -43,6 +43,8 @@ for the final location of the dataset and repository roots-->
         <repository.basedir>${project.build.directory}/test-classes/repo</repository.basedir>
         <!--Dataset is the name of the CSV's for use in JMeter-->
         <dataset.basedir>${project.build.directory}/test-classes</dataset.basedir>
+        <context>webapp-${project.version}</context>
+        <dataset.version>internal</dataset.version>
     </properties>
     <dependencies>
         <dependency>
@@ -352,7 +354,6 @@ for the final location of the dataset and repository roots-->
             <properties>
                 <tool.basedir>c:/installs/tools</tool.basedir>
                 <appdata.basedir>c:/installs/appdata</appdata.basedir>
-                <dataset.version>internal</dataset.version>
             </properties>
         </profile>
         <profile>
@@ -360,7 +361,6 @@ for the final location of the dataset and repository roots-->
             <properties>
                 <tool.basedir>/opt/tools</tool.basedir>
                 <appdata.basedir>/opt/appdata</appdata.basedir>
-                <dataset.version>internal</dataset.version>
             </properties>
         </profile>
     <!--<profile>
